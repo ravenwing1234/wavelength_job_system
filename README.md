@@ -1,2 +1,2 @@
-# wavelength_job_system
+# Wavelength Job System
 Lambda-based Modern C++ Job System
