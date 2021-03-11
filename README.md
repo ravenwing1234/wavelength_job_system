@@ -30,16 +30,40 @@ Lambda function based Modern C++ Job System
  
 **note**: For optimal performance, limit the lambda capture payload to 48 bytes of data.
           Modify the int literal of SBO_SIZE to a pointer-sized interval of bytes to increase.
+		  Ideally cached-line sized.
 
 ### To dispatch an async job with a callback:
  
-	wave::job::AsyncJobWithCallback( [](){ // Job }, [](){ // Callback } );
+	wave::job::AsyncJobWithCallback( 
+		[](){ // Job }, 
+		[](){ // Callback } 
+	);
  
 ### To dispatch an async job with a return value as a future that is promised to be filled:
  
-	auto futureResult = wave::job::AsyncJobWithFuture( []()->int { // Job w/ return int; } );  
+	auto futureResult = wave::job::AsyncJobWithFuture( 
+		[]()->int 
+		{ 
+			// Job w/ return int; 
+		} );  
 	int result = futureResult.get();
+	
+### You can create a job that will automatically sync upon closing scope
+Scope the synchronization with { }. Exiting scope waits for task complete
+Will block calling thread from leaving scope till job is completed
+    
+   { wave::job::SyncronousJob syncJobObj( [&...](...){...} ); 
+        // Do other work here
+   } // Will wait here for syncJobObj to be finished
  
 ### To flush all pending callback functions:
  
-	void FlushPendingJobCallbacks(); 
+	wave::job::FlushPendingJobCallbacks(); 
+
+### Wait for future to be filled
+
+    wave::job::WaitForFuture( FutureVariable );
+
+### Have the current thread assist with processing jobs until a condition is met
+
+    ProcessJobsUntil( ConditionIsTrue );

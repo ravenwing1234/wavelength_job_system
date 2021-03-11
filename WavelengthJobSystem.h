@@ -26,7 +26,7 @@
 *               } );
 * 
 *           **note**: For optimal performance, limit the lambda capture payload to 48 bytes of data.
-*                     Modify the int literal of SBO_SIZE to a pointer-sized interval of bytes to increase.
+*                     Modify the int literal of SBO_SIZE to a pointer-sized interval of bytes to increase. Ideally cache-line sized.
 *       
 *       // To dispatch an async job with a callback:
 * 
@@ -37,10 +37,25 @@
 *           auto futureResult = wave::job::AsyncJobWithFuture( []()->int { // Job w/ return int; } );
 *           int result = futureResult.get();
 * 
+*       // You can create a job that will automatically sync upon closing scope
+*       // Scope the synchronization with { }. Exiting scope waits for task complete
+*       // Will block calling thread from leaving scope till job is completed
+*           
+*          { wave::job::SyncronousJob syncJobObj( [&...](...){...} ); 
+*               // Do other work here
+*          } // Will wait here for syncJobObj to be finished
+*            
 *       // To flush all pending callback functions:
 * 
-*           void FlushPendingJobCallbacks(); 
+*           wave::job::FlushPendingJobCallbacks(); 
 * 
+*       // Wait for future to be filled
+* 
+*           wave::job::WaitForFuture( *FutureVar* );
+* 
+*       // Have the current thread assist with processing jobs until a condition is met
+* 
+*           ProcessJobsUntil( ConditionIsTrue );
 * 
 *   BSD 2-Clause License
 *   
@@ -347,25 +362,6 @@ constexpr int MAX_WORKER_THREADS = 32;
 
 class JobManager
 {
-
-private:
-
-	std::vector< ThreadRAII >													m_workerThreads;
-	MPMCQueue< Job >															m_workQueue[EJobPriority::NUM_PRIORITIES];
-	std::unordered_map< std::thread::id, MPMCQueue< Job > >						m_finishedJobCallbacks;
-	SectionLockRecursive														m_threadManagementLock;
-	SectionLock																	m_callbackLock;
-	SectionLock																	m_workerThreadLock;
-	SectionLock																	m_signalLock;
-	SectionLock																	m_blockingThreadSignalLock;
-	std::condition_variable														m_workerWaitCondition;
-	std::condition_variable														m_blockingWorkerWaitCondition;
-	volatile int																m_waitingThreadFlags = { 0 };
-	int																			m_currentWorkerCount = { 0 };
-	volatile int																m_maxWorkerCount = { static_cast<int>(std::thread::hardware_concurrency() < MAX_WORKER_THREADS ? std::thread::hardware_concurrency() : MAX_WORKER_THREADS) };
-	volatile bool																m_bBlockingThreadActive = { true };
-	volatile bool																m_bBlockingThreadWaiting = { false };
-
 public:
 
 	JobManager() {}
@@ -634,6 +630,24 @@ private:
             }
         }
     }
+
+private:
+
+	std::vector< ThreadRAII >													m_workerThreads;
+	MPMCQueue< Job >															m_workQueue[EJobPriority::NUM_PRIORITIES];
+	std::unordered_map< std::thread::id, MPMCQueue< Job > >						m_finishedJobCallbacks;
+	SectionLockRecursive														m_threadManagementLock;
+	SectionLock																	m_callbackLock;
+	SectionLock																	m_workerThreadLock;
+	SectionLock																	m_signalLock;
+	SectionLock																	m_blockingThreadSignalLock;
+	std::condition_variable														m_workerWaitCondition;
+	std::condition_variable														m_blockingWorkerWaitCondition;
+	volatile int																m_waitingThreadFlags = { 0 };
+	int																			m_currentWorkerCount = { 0 };
+	volatile int																m_maxWorkerCount = { static_cast<int>(std::thread::hardware_concurrency() < MAX_WORKER_THREADS ? std::thread::hardware_concurrency() : MAX_WORKER_THREADS) };
+	volatile bool																m_bBlockingThreadActive = { true };
+	volatile bool																m_bBlockingThreadWaiting = { false };
 };
 
 /**
