@@ -2,8 +2,8 @@
 Lambda function based Modern C++ Job System
 
 ## Dependendies:
-C++17
-A MPMC Queue. Currently using an amazing implemention from https://github.com/cameron314/concurrentqueue
+- C++17
+- A MPMC Queue. Currently using an amazing implemention from https://github.com/cameron314/concurrentqueue
 
 ## Basic Usage:
 ### Init job system before dispatching any jobs: 
