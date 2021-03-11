@@ -52,12 +52,16 @@ Lambda function based Modern C++ Job System
 Scope the synchronization with { }. Exiting scope waits for task complete
 Will block calling thread from leaving scope till job is completed
     
-   { wave::job::SyncronousJob syncJobObj( [&...](...){...} ); 
-        // Do other work here
-   } // Will wait here for syncJobObj to be finished
- 
+	{ wave::job::SyncronousJob syncJobObj( [...](...)
+		{
+			...
+		} ); 
+	    
+		// Do other work here
+	} // Will wait here for syncJobObj to be finished
+	 
 ### To flush all pending callback functions:
- 
+	 
 	wave::job::FlushPendingJobCallbacks(); 
 
 ### Wait for future to be filled

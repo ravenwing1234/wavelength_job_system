@@ -10,6 +10,7 @@
 * 
 * 
 *   Usage:
+* 
 *       // Init job system before dispatching any jobs:
 * 
 *           wave::InitGlobalJobSystem();
@@ -41,7 +42,7 @@
 *       // Scope the synchronization with { }. Exiting scope waits for task complete
 *       // Will block calling thread from leaving scope till job is completed
 *           
-*          { wave::job::SyncronousJob syncJobObj( [&...](...){...} ); 
+*          { wave::job::SyncronousJob syncJobObj( [...](...){...} ); 
 *               // Do other work here
 *          } // Will wait here for syncJobObj to be finished
 *            
@@ -105,7 +106,7 @@ template< typename T >
 using MPMCQueue = moodycamel::ConcurrentQueue< T >; // <------Specify your multi-producer multi-consumer queue here
 
 using f64 = double;
-
+using JobCounter = std::atomic< int >;
 constexpr int SBO_SIZE = 64 - sizeof(void*);
 
 /**
@@ -190,8 +191,6 @@ private:
 * JobEnums
 *
 */
-
-using JobCounter = std::atomic< int >;
 
 namespace EJobPriority
 {
