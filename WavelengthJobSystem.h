@@ -118,16 +118,16 @@ class Clock
 {
 public:
 
-    static inline f64 GetAbsoluteTimeSeconds()
-    {
-        return std::chrono::duration_cast<std::chrono::duration< f64 >>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-    }
+	static inline f64 GetAbsoluteTimeSeconds()
+	{
+		return std::chrono::duration_cast<std::chrono::duration< f64 >>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+	}
 
-    static inline f64 ApplicationTimeSeconds() // Seconds since application started running
-    {
+	static inline f64 ApplicationTimeSeconds() // Seconds since application started running
+	{
 		static f64 s_applicationBeginTime = GetAbsoluteTimeSeconds();
 		return GetAbsoluteTimeSeconds() - s_applicationBeginTime;
-    }
+	}
 
 };
 
@@ -219,7 +219,7 @@ class IBaseJob
 public:
 
 	virtual void ExecuteJob() = 0;
-    virtual ~IBaseJob() {}
+	virtual ~IBaseJob() {}
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -234,7 +234,7 @@ public:
 		: m_func( std::move( func ) )
 	{}
 
-    virtual ~FunctorJob() {}
+	virtual ~FunctorJob() {}
 
 	virtual void ExecuteJob() override
 	{
@@ -365,9 +365,9 @@ public:
 
 	JobManager() {}
 	JobManager( int numWorkers, bool bCreateBlockingWorker = false )
-    : m_maxWorkerCount( numWorkers )
+	: m_maxWorkerCount( numWorkers )
 	, m_bBlockingThreadActive( bCreateBlockingWorker )
-    {}
+	{}
 
 	~JobManager() {}
 	JobManager( const JobManager& )				= delete;
@@ -376,118 +376,118 @@ public:
 	JobManager& operator=( JobManager&& )		= delete;
 
 	inline void Init()
-    {
-        init( m_bBlockingThreadActive );
-    }
+	{
+		init( m_bBlockingThreadActive );
+	}
 	
-    inline void ShutDown()
-    {
-        SectionLockGuardRecursive threadLock( m_threadManagementLock );
-        m_bBlockingThreadActive = false;
-        SetMaxThreadCount( 0 );
-        if( !m_workerThreads.empty() )
-        {
-            m_workerThreads.pop_back();
-        }
-        SectionLockGuard callbackLock( m_callbackLock );
-    }
-
+	inline void ShutDown()
+	{
+		SectionLockGuardRecursive threadLock( m_threadManagementLock );
+		m_bBlockingThreadActive = false;
+		SetMaxThreadCount( 0 );
+		if( !m_workerThreads.empty() )
+		{
+			m_workerThreads.pop_back();
+		}
+		SectionLockGuard callbackLock( m_callbackLock );
+	}
+	
 	//////////////////////////////////////////////////////////////////////////
-
-    /**
-    * Queue a functor task to be processed by job system
-    * Performs a move on the passed in functor and places in the appropriate priority queue
-    */
+	
+	/**
+	* Queue a functor task to be processed by job system
+	* Performs a move on the passed in functor and places in the appropriate priority queue
+	*/
 	template< typename FunctionType >
 	inline void QueueJob( FunctionType&& func, EJobPriority::EPriority priority = EJobPriority::NORMAL )
-    {
-        m_workQueue[ priority ].enqueue( Job( std::move( func ) ) );
-        notifyWaitingWorkers( priority );
-    }
+	{
+		m_workQueue[ priority ].enqueue( Job( std::move( func ) ) );
+		notifyWaitingWorkers( priority );
+	}
 
-    /**
-    * Queue a functor task to be processed by job system
-    * Additionally queues a function callback to be fired on FlushJobCallbacks in calling thread
-    */
+	/**
+	* Queue a functor task to be processed by job system
+	* Additionally queues a function callback to be fired on FlushJobCallbacks in calling thread
+	*/
 	template< typename FunctionType, typename CallbackType >
 	inline void QueueJobWithCallback( FunctionType&& func, CallbackType&& callback, EJobPriority::EPriority priority = EJobPriority::NORMAL )
-    {
-        std::thread::id callerThreadId = std::this_thread::get_id();
-        auto asyncJobWithCallback = std::bind(
-            [ this, callerThreadId ]( FunctionType _func, CallbackType _callback )
-            {
-                _func();
-                m_finishedJobCallbacks[ callerThreadId ].enqueue( Job( std::move( _callback ) ) );
-            },
-            std::move( func ),
-            std::move( callback )
-        );
-        QueueJob( std::move( asyncJobWithCallback ), priority );
-    }
+	{
+		std::thread::id callerThreadId = std::this_thread::get_id();
+		auto asyncJobWithCallback = std::bind(
+			[ this, callerThreadId ]( FunctionType _func, CallbackType _callback )
+			{
+				_func();
+				m_finishedJobCallbacks[ callerThreadId ].enqueue( Job( std::move( _callback ) ) );
+			},
+			std::move( func ),
+			std::move( callback )
+		);
+		QueueJob( std::move( asyncJobWithCallback ), priority );
+	}
 
-    /**
-    * Queue a functor task with a return value to be processed by job system
-    * Return value of passed in functor is returned to caller as a std::future
-    */
+	/**
+	* Queue a functor task with a return value to be processed by job system
+	* Return value of passed in functor is returned to caller as a std::future
+	*/
 	template< typename FunctionType >
 	inline std::future< typename std::invoke_result< FunctionType >::type > QueueJobWithFuture( FunctionType&& func, EJobPriority::EPriority priority = EJobPriority::NORMAL )
-    {
-        std::packaged_task< std::invoke_result< FunctionType >::type() > task( std::move( func ) );
-        std::future< std::invoke_result< FunctionType >::type > result( task.get_future() );
-        m_workQueue[ priority ].enqueue( Job( std::move( task ) ) );
-        notifyWaitingWorkers( priority );
-
-        return result;
-    }
-    
+	{
+		std::packaged_task< std::invoke_result< FunctionType >::type() > task( std::move( func ) );
+		std::future< std::invoke_result< FunctionType >::type > result( task.get_future() );
+		m_workQueue[ priority ].enqueue( Job( std::move( task ) ) );
+		notifyWaitingWorkers( priority );
+	
+		return result;
+	}
+	
 	//////////////////////////////////////////////////////////////////////////
 
-    /**
-    * Calling thread waiting for future can help process jobs
-    */
+	/**
+	* Calling thread waiting for future can help process jobs
+	*/
 	template< typename FutureType >
 	inline void WaitForFuture( std::future< FutureType >& futureValue )
-    {
-        while( futureValue.wait_for( std::chrono::seconds( 0 ) ) == std::future_status::timeout )
-        {
-            ProcessNextJob();
-        }
-    }
+	{
+		while( futureValue.wait_for( std::chrono::seconds( 0 ) ) == std::future_status::timeout )
+		{
+			ProcessNextJob();
+		}
+	}
 
 	inline bool ProcessNextJob()
-    {
-        Job currentJob;
-        for( int currentPriority = EJobPriority::HIGH; currentPriority >= EJobPriority::LOW; --currentPriority )
-        {
-            if( m_workQueue[ currentPriority ].try_dequeue( currentJob ) )
-            {
-                break;
-            }
-        }
-        return currentJob();
-    }
+	{
+		Job currentJob;
+		for( int currentPriority = EJobPriority::HIGH; currentPriority >= EJobPriority::LOW; --currentPriority )
+		{
+			if( m_workQueue[ currentPriority ].try_dequeue( currentJob ) )
+			{
+				break;
+			}
+		}
+		return currentJob();
+	}
 
 	inline void FlushJobCallbacks()
-    {
-        SectionLockGuard lock( m_callbackLock );
-        Job callbacks[ MAX_CALLBACKS_PER_FRAME ];
-        const std::thread::id callerThreadId = std::this_thread::get_id();
-        const std::size_t callbackCount = m_finishedJobCallbacks[ callerThreadId ].try_dequeue_bulk( callbacks, MAX_CALLBACKS_PER_FRAME );
-        for( std::size_t i = 0; i < callbackCount; ++i )
-        {
-            callbacks[i]();
-        }
-    }
+	{
+		SectionLockGuard lock( m_callbackLock );
+		Job callbacks[ MAX_CALLBACKS_PER_FRAME ];
+		const std::thread::id callerThreadId = std::this_thread::get_id();
+		const std::size_t callbackCount = m_finishedJobCallbacks[ callerThreadId ].try_dequeue_bulk( callbacks, MAX_CALLBACKS_PER_FRAME );
+		for( std::size_t i = 0; i < callbackCount; ++i )
+		{
+			callbacks[i]();
+		}
+	}
 
 	inline void SetMaxThreadCount( int maxWorkerCount)
-    {
-        {SectionLockGuardRecursive lock( m_threadManagementLock );
-            m_maxWorkerCount = maxWorkerCount;
-        }
-        m_workerWaitCondition.notify_all();
-        m_blockingWorkerWaitCondition.notify_all();
-        updateThreadPool();
-    }
+	{
+		{SectionLockGuardRecursive lock( m_threadManagementLock );
+			m_maxWorkerCount = maxWorkerCount;
+		}
+		m_workerWaitCondition.notify_all();
+		m_blockingWorkerWaitCondition.notify_all();
+		updateThreadPool();
+	}
 
 	inline int GetMaxThreadCount() const { return m_maxWorkerCount; }
 	inline int GetCurrentThreadCount() const { return m_currentWorkerCount; }
@@ -495,158 +495,158 @@ public:
 private:
 
 	inline void init( bool bCreateBlockingWorker )
-    {
-        SectionLockGuardRecursive lock(m_threadManagementLock);
-
-        // Create blocking thread at index 0
-        if( bCreateBlockingWorker )
-        {
-            m_workerThreads.emplace_back( std::thread( &JobManager::workerBlockingThreadMain, this ) );
-        }
-
-        // Create general worker threads
-        for( m_currentWorkerCount; m_currentWorkerCount < m_maxWorkerCount; ++m_currentWorkerCount )
-        {
-            m_workerThreads.emplace_back( std::thread( &JobManager::workerGenericThreadMain, this ) );
-        }
-    }
+	{
+		SectionLockGuardRecursive lock(m_threadManagementLock);
+	
+		// Create blocking thread at index 0
+		if( bCreateBlockingWorker )
+		{
+			m_workerThreads.emplace_back( std::thread( &JobManager::workerBlockingThreadMain, this ) );
+		}
+	
+		// Create general worker threads
+		for( m_currentWorkerCount; m_currentWorkerCount < m_maxWorkerCount; ++m_currentWorkerCount )
+		{
+			m_workerThreads.emplace_back( std::thread( &JobManager::workerGenericThreadMain, this ) );
+		}
+	}
 
 	inline void updateThreadPool()
-    {
-        SectionLockGuardRecursive lock( m_threadManagementLock );
-        for( m_currentWorkerCount; m_currentWorkerCount < m_maxWorkerCount; ++m_currentWorkerCount )
-        {
-            m_workerThreads.emplace_back( std::thread( &JobManager::workerGenericThreadMain, this ) );
-        }
-        for( m_currentWorkerCount; m_currentWorkerCount > m_maxWorkerCount; --m_currentWorkerCount )
-        {
-            m_workerThreads.pop_back();
-        }
-    }
+	{
+		SectionLockGuardRecursive lock( m_threadManagementLock );
+		for( m_currentWorkerCount; m_currentWorkerCount < m_maxWorkerCount; ++m_currentWorkerCount )
+		{
+			m_workerThreads.emplace_back( std::thread( &JobManager::workerGenericThreadMain, this ) );
+		}
+		for( m_currentWorkerCount; m_currentWorkerCount > m_maxWorkerCount; --m_currentWorkerCount )
+		{
+			m_workerThreads.pop_back();
+		}
+	}
 
 	inline void workerGenericThreadMain()
-    {
-        m_workerThreadLock.lock();
-        static int s_nextWorkerID = 0;
-        const int workerID = s_nextWorkerID;
-
-        ++s_nextWorkerID;
-        m_workerThreadLock.unlock();
-        
-        constexpr f64 maxTimeWithNoJob = 0.003;
-        f64 lastTime = Clock::GetAbsoluteTimeSeconds();
-        f64 timeSinceLastJob = 0.0;
-
-        while( workerID < m_maxWorkerCount )
-        {
-            if( !ProcessNextJob() )
-            {
-                f64 currTime = Clock::GetAbsoluteTimeSeconds();
-                f64 deltaTime = currTime - lastTime;
-                timeSinceLastJob += deltaTime;
-                lastTime = currTime;
-                if( timeSinceLastJob > maxTimeWithNoJob )
-                {
-                    std::unique_lock< SectionLock > waitLock( m_signalLock );
-                    m_waitingThreadFlags |= 1 << workerID;
-                    m_workerWaitCondition.wait( waitLock );
-                    m_waitingThreadFlags &= ~( 1 << workerID );
-                }
-                else
-                {
-                    std::this_thread::yield();
-                }
-            }
-            else
-            {
-                timeSinceLastJob = 0;
-            }
-        }
-
-        m_workerThreadLock.lock();
-            --s_nextWorkerID;
-        m_workerThreadLock.unlock();
-    }
+	{
+		m_workerThreadLock.lock();
+		static int s_nextWorkerID = 0;
+		const int workerID = s_nextWorkerID;
+	
+		++s_nextWorkerID;
+		m_workerThreadLock.unlock();
+		
+		constexpr f64 maxTimeWithNoJob = 0.003;
+		f64 lastTime = Clock::GetAbsoluteTimeSeconds();
+		f64 timeSinceLastJob = 0.0;
+	
+		while( workerID < m_maxWorkerCount )
+		{
+			if( !ProcessNextJob() )
+			{
+				f64 currTime = Clock::GetAbsoluteTimeSeconds();
+				f64 deltaTime = currTime - lastTime;
+				timeSinceLastJob += deltaTime;
+				lastTime = currTime;
+				if( timeSinceLastJob > maxTimeWithNoJob )
+				{
+					std::unique_lock< SectionLock > waitLock( m_signalLock );
+					m_waitingThreadFlags |= 1 << workerID;
+					m_workerWaitCondition.wait( waitLock );
+					m_waitingThreadFlags &= ~( 1 << workerID );
+				}
+				else
+				{
+					std::this_thread::yield();
+				}
+			}
+			else
+			{
+				timeSinceLastJob = 0;
+			}
+		}
+	
+		m_workerThreadLock.lock();
+			--s_nextWorkerID;
+		m_workerThreadLock.unlock();
+	}
 
 	inline void workerBlockingThreadMain()
-    {
-        constexpr int maxBulkCount = 64;
-        constexpr f64 maxTimeWithNoJob = 0.003;
-        f64 lastTime = Clock::GetAbsoluteTimeSeconds();
-        f64 timeSinceLastJob = 0.0;
+	{
+		constexpr int maxBulkCount = 64;
+		constexpr f64 maxTimeWithNoJob = 0.003;
+		f64 lastTime = Clock::GetAbsoluteTimeSeconds();
+		f64 timeSinceLastJob = 0.0;
 
-        while( m_bBlockingThreadActive )
-        {
-            Job currentJob[ maxBulkCount ];
-            const std::size_t numJobs = m_workQueue[ EJobPriority::BLOCKING ].try_dequeue_bulk( currentJob, maxBulkCount );
-            if( numJobs )
-            {
-                for( std::size_t i = 0; i < numJobs; ++i )
-                {
-                    currentJob[i]();
-                }
-            }
-            else
-            {
-                f64 currTime = Clock::GetAbsoluteTimeSeconds();
-                f64 deltaTime = currTime - lastTime;
-                timeSinceLastJob += deltaTime;
-                lastTime = currTime;
-                if( timeSinceLastJob > maxTimeWithNoJob )
-                {
-                    std::unique_lock< SectionLock > waitLock( m_blockingThreadSignalLock );
-                    m_bBlockingThreadWaiting = true;
-                    m_blockingWorkerWaitCondition.wait( waitLock );
-                    m_bBlockingThreadWaiting = false;
-                }
-                else
-                {
-                    std::this_thread::yield();
-                }
-            }
-        }
-    }
+		while( m_bBlockingThreadActive )
+		{
+			Job currentJob[ maxBulkCount ];
+			const std::size_t numJobs = m_workQueue[ EJobPriority::BLOCKING ].try_dequeue_bulk( currentJob, maxBulkCount );
+			if( numJobs )
+			{
+				for( std::size_t i = 0; i < numJobs; ++i )
+				{
+					currentJob[i]();
+				}
+			}
+			else
+			{
+				f64 currTime = Clock::GetAbsoluteTimeSeconds();
+				f64 deltaTime = currTime - lastTime;
+				timeSinceLastJob += deltaTime;
+				lastTime = currTime;
+				if( timeSinceLastJob > maxTimeWithNoJob )
+				{
+					std::unique_lock< SectionLock > waitLock( m_blockingThreadSignalLock );
+					m_bBlockingThreadWaiting = true;
+					m_blockingWorkerWaitCondition.wait( waitLock );
+					m_bBlockingThreadWaiting = false;
+				}
+				else
+				{
+					std::this_thread::yield();
+				}
+			}
+		}
+	}
 
 	inline void notifyWaitingWorkers( EJobPriority::EPriority priority )
-    {
-        switch( priority )
-        {
-            case wave::EJobPriority::BLOCKING:
-            {
-                if( m_bBlockingThreadWaiting )
-                {
-                    m_blockingWorkerWaitCondition.notify_all();
-                }
-                break;
-            }
-            default:
-            {
-                if( m_waitingThreadFlags > 0 )
-                {
-                    m_workerWaitCondition.notify_one();
-                }
-                break;
-            }
-        }
-    }
+	{
+		switch( priority )
+		{
+		case wave::EJobPriority::BLOCKING:
+		{
+			if( m_bBlockingThreadWaiting )
+			{
+				m_blockingWorkerWaitCondition.notify_all();
+			}
+			break;
+		}
+		default:
+		{
+			if( m_waitingThreadFlags > 0 )
+			{
+				m_workerWaitCondition.notify_one();
+			}
+			break;
+		}
+	}
+	}
 
 private:
 
-	std::vector< ThreadRAII >													m_workerThreads;
-	MPMCQueue< Job >															m_workQueue[EJobPriority::NUM_PRIORITIES];
-	std::unordered_map< std::thread::id, MPMCQueue< Job > >						m_finishedJobCallbacks;
-	SectionLockRecursive														m_threadManagementLock;
-	SectionLock																	m_callbackLock;
-	SectionLock																	m_workerThreadLock;
-	SectionLock																	m_signalLock;
-	SectionLock																	m_blockingThreadSignalLock;
-	std::condition_variable														m_workerWaitCondition;
-	std::condition_variable														m_blockingWorkerWaitCondition;
-	volatile int																m_waitingThreadFlags = { 0 };
-	int																			m_currentWorkerCount = { 0 };
-	volatile int																m_maxWorkerCount = { static_cast<int>(std::thread::hardware_concurrency() < MAX_WORKER_THREADS ? std::thread::hardware_concurrency() : MAX_WORKER_THREADS) };
-	volatile bool																m_bBlockingThreadActive = { true };
-	volatile bool																m_bBlockingThreadWaiting = { false };
+	std::vector< ThreadRAII > m_workerThreads;
+	MPMCQueue< Job > m_workQueue[EJobPriority::NUM_PRIORITIES];
+	std::unordered_map< std::thread::id, MPMCQueue< Job > > m_finishedJobCallbacks;
+	SectionLockRecursive m_threadManagementLock;
+	SectionLock m_callbackLock;
+	SectionLock m_workerThreadLock;
+	SectionLock m_signalLock;
+	SectionLock m_blockingThreadSignalLock;
+	std::condition_variable m_workerWaitCondition;
+	std::condition_variable m_blockingWorkerWaitCondition;
+	volatile int m_waitingThreadFlags = { 0 };
+	int m_currentWorkerCount = { 0 };
+	volatile int m_maxWorkerCount = { static_cast<int>(std::thread::hardware_concurrency() < MAX_WORKER_THREADS ? std::thread::hardware_concurrency() : MAX_WORKER_THREADS) };
+	volatile bool m_bBlockingThreadActive = { true };
+	volatile bool m_bBlockingThreadWaiting = { false };
 };
 
 /**
@@ -660,7 +660,7 @@ inline std::unique_ptr< JobManager > gJobManager;
 
 inline void InitGlobalJobSystem()
 {
-    gJobManager = std::make_unique< JobManager >();
+	gJobManager = std::make_unique< JobManager >();
 	gJobManager->Init();
 }
 
