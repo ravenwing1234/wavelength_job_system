@@ -64,7 +64,7 @@ Will block calling thread from leaving scope till job is completed
 	 
 	wave::job::FlushPendingJobCallbacks(); 
 
-### Wait for future to be filled
+### Have calling thread help process jobs while waiting for future to be filled
 
     wave::job::WaitForFuture( FutureVariable );
 
