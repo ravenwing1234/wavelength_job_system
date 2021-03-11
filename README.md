@@ -68,6 +68,10 @@ Will block calling thread from leaving scope till job is completed
 
     wave::job::WaitForFuture( FutureVariable );
 
+### Have the current thread assist with processing jobs until all jobs are complete
+
+	wave::job::WaitForAllJobsComplete();
+
 ### Have the current thread assist with processing jobs until a condition is met
 
     ProcessJobsUntil( ConditionIsTrue );

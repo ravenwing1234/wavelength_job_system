@@ -54,9 +54,14 @@
 * 
 *           wave::job::WaitForFuture( *FutureVar* );
 * 
+*       // Have the current thread assist with processing jobs until all jobs are complete
+*
+*           wave::job::WaitForAllJobsComplete();
+* 
 *       // Have the current thread assist with processing jobs until a condition is met
 * 
 *           ProcessJobsUntil( ConditionIsTrue );
+* 
 * 
 *   BSD 2-Clause License
 *   
@@ -685,14 +690,29 @@ namespace job
 /// Global Job system flush
 inline void FlushPendingJobCallbacks()
 {
-	gJobManager->FlushJobCallbacks();
+	if( gJobManager )
+	{
+		gJobManager->FlushJobCallbacks();
+	}
+}
+
+/// Global wait until job queue is empty
+inline void WaitForAllJobsComplete()
+{
+	if( gJobManager )
+	{
+		while( gJobManager->ProcessNextJob() );
+	}
 }
 
 /// Global wait for future task helper
 template< typename FutureType >
 void WaitForFuture( std::future< FutureType >& futureValue )
 {
-	gJobManager->WaitForFuture( futureValue );
+	if( gJobManager )
+	{
+		gJobManager->WaitForFuture(futureValue);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
