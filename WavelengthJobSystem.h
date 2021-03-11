@@ -1,6 +1,7 @@
 /**
 * WavelengthJobSystem.h
 * A Lambda function based job system
+* Requires C++17
 * Created by: Andrew Nguyen
 * https://github.com/ravenwing1234/wavelength_job_system
 * 
