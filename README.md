@@ -10,7 +10,7 @@ Lambda function based Modern C++ Job System
 2. Copy concurrentqueue.h OR specify your own multi-producer multi-consumer queue by replacing the alias 
 
 	template< typename T >
-	using MPMCQueue = /*Your multi-producer multi-consumer queue*/;
+	using MPMCQueue = (*Your multi-producer multi-consumer queue*);
 
 ## Basic Usage:
 ### Init job system before dispatching any jobs: 
