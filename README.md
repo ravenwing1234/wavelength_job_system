@@ -7,10 +7,10 @@ Lambda function based Modern C++ Job System
 
 ## How to setup:
 1. Copy WavelengthJobSystem.h to your project.
-2. Copy concurrentqueue.h OR specify your own MPMC queue by replacing the alias 
+2. Copy concurrentqueue.h OR specify your own multi-producer multi-consumer queue by replacing the alias 
 
 	template< typename T >
-	using MPMCQueue = moodycamel::ConcurrentQueue< T >;
+	using MPMCQueue = /*Your multi-producer multi-consumer queue*/;
 
 ## Basic Usage:
 ### Init job system before dispatching any jobs: 
